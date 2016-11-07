@@ -57,7 +57,7 @@ OBJDUMP := objdump
 
 # Try to infer the correct QEMU if not specified
 ifndef QEMU
-QEMU := /usr/bin/qemu-system-i386
+QEMU := /home/software/qemu/bin/qemu-system-i386
 # QEMU := $(shell if which qemu 1> /dev/null 2> /dev/null; \
 	then echo qemu; exit; \
 	else \
