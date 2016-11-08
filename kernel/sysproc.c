@@ -36,6 +36,17 @@ sys_clone(void)
 }
 
 int
+sys_join(void)
+{
+  int pid;
+  if(argptr(0, (void*)&pid, sizeof(void*)) < 0){
+     return -1;
+  }
+
+  return join(pid);
+}
+
+int
 sys_exit(void)
 {
   exit();

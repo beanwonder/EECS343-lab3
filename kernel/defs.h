@@ -99,6 +99,7 @@ struct proc*    copyproc(struct proc*);
 void            exit(void);
 int             fork(void);
 int             clone(void(*fcn)(void*), void* arg, void* stack);
+int             join(int pid);
 int             growproc(int);
 int             kill(int);
 void            pinit(void);
