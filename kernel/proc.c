@@ -469,7 +469,6 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   char *sp;                 // user stack pointer
   sp = stack + PGSIZE;
 
-
   // add one pagesize for stack to use
 
   // first check stack
@@ -479,16 +478,15 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   if((uint)stack % PGSIZE != 0) {
     return -1;
   }
+  
+  // check page existance
   if (lookuppage(proc->pgdir, stack) == 0) {
     return -1;
   }
-  // check page existance
 
   // Allocate thread.
   if((np = allocproc()) == 0)
     return -1;
-
-
 
   // share memory pagetable from p.
   // share the same kstack 
