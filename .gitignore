@@ -22,6 +22,9 @@ fs.img
 xv6.img
 xv6memfs.img
 
+# python .pyc
+*.pyc
+
 # other generated files
 bootother
 initcode
@@ -39,4 +42,4 @@ initcode
 user/bin/
 tools/mkfs
 version
-
+Makefile

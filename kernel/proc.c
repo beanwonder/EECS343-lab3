@@ -109,13 +109,20 @@ growproc(int n)
   uint sz;
   
   sz = proc->sz;
+  // acquire(&ptable.pgdir_lock);
   if(n > 0){
-    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
+    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0) {
+      // release(&ptable.pgdir_lock);
       return -1;
+    }
   } else if(n < 0){
-    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
+    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0) {
+      // release(&ptable.pgdir_lock);
       return -1;
+    }
   }
+  // release(&ptable.pgdir_lock);
+
   proc->sz = sz;
   switchuvm(proc);
   return 0;
@@ -152,7 +159,10 @@ fork(void)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
- 
+  
+  // for thread clone indicate main thread or not
+  np->is_main_thd = 1;
+
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
@@ -190,9 +200,13 @@ exit(void)
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == proc){
-      p->parent = initproc;
-      if(p->state == ZOMBIE)
-        wakeup1(initproc);
+      if (p->is_main_thd == 1) {
+        p->parent = initproc;
+        if(p->state == ZOMBIE)
+          wakeup1(initproc);
+      } else {
+        kill(p->pid);
+      }
     }
   }
 
@@ -443,4 +457,90 @@ procdump(void)
   }
 }
 
+/* 
+  The clone syscall creates a new thread of execution by reating 
+  a clone of the current process with the same address space.
+*/ 
+int
+clone(void(*fcn)(void*), void* arg, void* stack)
+{
+  int i, pid;
+  struct proc *np;
+  char *sp;                 // user stack pointer
+  sp = stack + PGSIZE;
 
+
+  // add one pagesize for stack to use
+
+  // first check stack
+  // not valid return -1;
+  // allignment
+  // stack point to start address of that pgage
+  if((uint)stack % PGSIZE != 0) {
+    return -1;
+  }
+  if (lookuppage(proc->pgdir, stack) == 0) {
+    return -1;
+  }
+  // check page existance
+
+  // Allocate thread.
+  if((np = allocproc()) == 0)
+    return -1;
+
+
+
+  // share memory pagetable from p.
+  // share the same kstack 
+  np->pgdir = proc->pgdir;
+  // np->kstack = p->kstack;
+  /* 
+  if((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0){
+    kfree(np->kstack);
+    np->kstack = 0;
+    np->state = UNUSED;
+    return -1;
+  }
+  */
+  // C calling convention
+  // stack passing
+  // return value in the top
+
+  np->sz = proc->sz;
+  // modity fork set the main
+  np->is_main_thd = 0;
+  if (proc->is_main_thd == 1) {
+    np->parent = proc;
+  } else {
+    np->parent = proc->parent;
+  }
+  // copy trap frame
+  *np->tf = *proc->tf;
+
+  // set context
+  np->context->eip = (uint)fcn;
+  // set up user stack register
+  np->context->ebp = (uint)sp;
+  // set up return address for fnc function call
+  sp -= 4;
+  // first arugment
+  *((uint*)sp) = (uint)arg;
+  sp -= 4;
+  *((uint*)sp) = 0xffffffff;
+  // arg is real arguments or pointer to arguments
+  np->tf->esp = (uint)sp;
+
+  // Clear %eax so that fork returns 0 in the child.
+  // np->tf->eax = 0;
+
+  // copy file descp
+  for(i = 0; i < NOFILE; i++)
+    if(proc->ofile[i])
+      np->ofile[i] = filedup(proc->ofile[i]);
+  np->cwd = idup(proc->cwd);
+ 
+  pid = np->pid;
+  np->state = RUNNABLE;
+  safestrcpy(np->name, proc->name, sizeof(proc->name));
+  return pid;
+}
