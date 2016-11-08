@@ -5,6 +5,7 @@ struct stat;
 
 // system calls
 int fork(void);
+int clone(void(*fcn)(void*), void* arg, void* stack);
 int exit(void) __attribute__((noreturn));
 int wait(void);
 int pipe(int*);
@@ -41,4 +42,3 @@ void free(void*);
 int atoi(const char*);
 
 #endif // _USER_H_
-

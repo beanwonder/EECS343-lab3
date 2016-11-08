@@ -8,6 +8,7 @@ int sys_dup(void);
 int sys_exec(void);
 int sys_exit(void);
 int sys_fork(void);
+int sys_clone(void);
 int sys_fstat(void);
 int sys_getpid(void);
 int sys_kill(void);

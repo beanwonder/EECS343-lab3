@@ -55,7 +55,7 @@ int
 argptr(int n, char **pp, int size)
 {
   int i;
-  
+
   if(argint(n, &i) < 0)
     return -1;
   if((uint)i >= proc->sz || (uint)i+size > proc->sz)
@@ -88,6 +88,7 @@ static int (*syscalls[])(void) = {
 [SYS_exec]    sys_exec,
 [SYS_exit]    sys_exit,
 [SYS_fork]    sys_fork,
+[SYS_clone]   sys_clone,
 [SYS_fstat]   sys_fstat,
 [SYS_getpid]  sys_getpid,
 [SYS_kill]    sys_kill,
@@ -111,7 +112,7 @@ void
 syscall(void)
 {
   int num;
-  
+
   num = proc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num] != NULL) {
     proc->tf->eax = syscalls[num]();

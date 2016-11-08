@@ -13,6 +13,29 @@ sys_fork(void)
 }
 
 int
+sys_clone(void)
+{
+
+    char* fcn;
+    if (argptr(0, &fcn, sizeof(void*)) < 0) {
+      return -1;
+    }
+
+    char* arg;
+    if (argptr(1, &arg, sizeof(void*)) < 0) {
+      return -1;
+    }
+
+    char* stack;
+    if (argptr(2, &stack, sizeof(void*)) < 0) {
+      return -1;
+    }
+
+    return clone((void*) fcn, (void*) arg, (void*) stack);
+
+}
+
+int
 sys_exit(void)
 {
   exit();
@@ -60,7 +83,7 @@ sys_sleep(void)
 {
   int n;
   uint ticks0;
-  
+
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
@@ -82,7 +105,7 @@ int
 sys_uptime(void)
 {
   uint xticks;
-  
+
   acquire(&tickslock);
   xticks = ticks;
   release(&tickslock);
