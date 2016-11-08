@@ -478,15 +478,16 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   if((uint)stack % PGSIZE != 0) {
     return -1;
   }
-  
+
   // check page existance
   if (lookuppage(proc->pgdir, stack) == 0) {
     return -1;
   }
 
   // Allocate thread.
-  if((np = allocproc()) == 0)
+  if((np = allocproc()) == 0) {
     return -1;
+  }
 
   // share memory pagetable from p.
   // share the same kstack 
@@ -505,7 +506,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   // return value in the top
 
   np->sz = proc->sz;
-  // modity fork set the main
+  // set flag not main thread
   np->is_main_thd = 0;
   if (proc->is_main_thd == 1) {
     np->parent = proc;
@@ -516,7 +517,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   *np->tf = *proc->tf;
 
   // set context
-  np->context->eip = (uint)fcn;
+  np->tf->eip = (uint)fcn;
   // set up user stack register
   np->context->ebp = (uint)sp;
   // set up return address for fnc function call
@@ -540,5 +541,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+  // procdump();
   return pid;
 }

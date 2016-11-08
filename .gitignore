@@ -24,6 +24,8 @@ xv6memfs.img
 
 # python .pyc
 *.pyc
+# log file 
+*.log
 
 # other generated files
 bootother
