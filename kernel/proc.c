@@ -9,6 +9,7 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  struct spinlock pgdir_lock;
 } ptable;
 
 static struct proc *initproc;
@@ -23,6 +24,7 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  initlock(&ptable.pgdir_lock, "pgdirlock");
 }
 
 // Look in the process table for an UNUSED proc.
@@ -109,19 +111,19 @@ growproc(int n)
   uint sz;
   
   sz = proc->sz;
-  // acquire(&ptable.pgdir_lock);
+  acquire(&ptable.pgdir_lock);
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0) {
-      // release(&ptable.pgdir_lock);
+      release(&ptable.pgdir_lock);
       return -1;
     }
   } else if(n < 0){
     if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0) {
-      // release(&ptable.pgdir_lock);
+      release(&ptable.pgdir_lock);
       return -1;
     }
   }
-  // release(&ptable.pgdir_lock);
+  release(&ptable.pgdir_lock);
 
   proc->sz = sz;
   switchuvm(proc);
@@ -480,7 +482,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   }
 
   // check page existance
-  if (lookuppage(proc->pgdir, stack) == 0) {
+  if ((uint)sp > proc->sz || lookuppage(proc->pgdir, stack) == 0) {
     return -1;
   }
 
@@ -516,10 +518,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   // copy trap frame
   *np->tf = *proc->tf;
 
-  // set context
-  np->tf->eip = (uint)fcn;
-  // set up user stack register
-  np->context->ebp = (uint)sp;
+
   // set up return address for fnc function call
   sp -= 4;
   // first arugment
@@ -527,6 +526,8 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   sp -= 4;
   *((uint*)sp) = 0xffffffff;
   // arg is real arguments or pointer to arguments
+  // set eip and user stack
+  np->tf->eip = (uint)fcn;
   np->tf->esp = (uint)sp;
 
   // Clear %eax so that fork returns 0 in the child.
