@@ -71,20 +71,6 @@ walkpgdir(pde_t *pgdir, const void *va, int create)
   return &pgtab[PTX(va)];
 }
 
-
-// va must be aligned
-// check if exits the page start with vaddr va 
-int
-lookuppage(pde_t *pgdir, const void *va)
-{
-  pte_t *pte = walkpgdir(proc->pgdir, va, 0);
-  if (pte != 0 && (*pte & PTE_P)) {
-    // true exists that page
-    return 1;
-  }
-  return 0;
-}
-
 // Create PTEs for linear addresses starting at la that refer to
 // physical addresses starting at pa. la and size might not
 // be page-aligned.
@@ -346,6 +332,8 @@ uva2ka(pde_t *pgdir, char *uva)
   pte_t *pte;
 
   pte = walkpgdir(pgdir, uva, 0);
+  if (pte == 0)
+    return 0;
   if((*pte & PTE_P) == 0)
     return 0;
   if((*pte & PTE_U) == 0)

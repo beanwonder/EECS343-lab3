@@ -201,6 +201,8 @@ exit(void)
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    // modified for thread exit
+    // cacasede exit if main thread exit
     if(p->parent == proc){
       if (p->is_main_thd == 1) {
         p->parent = initproc;
@@ -231,7 +233,9 @@ wait(void)
     // Scan through table looking for zombie children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->parent != proc)
+      if (p->parent != proc)
+        continue;
+      if (p->is_main_thd != 1)
         continue;
       havekids = 1;
       if(p->state == ZOMBIE){
@@ -482,7 +486,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   }
 
   // check page existance
-  if ((uint)sp > proc->sz || lookuppage(proc->pgdir, stack) == 0) {
+  if ((uint)sp > proc->sz || uva2ka(proc->pgdir, stack) == 0) {
     return -1;
   }
 
@@ -545,4 +549,72 @@ clone(void(*fcn)(void*), void* arg, void* stack)
 
   // procdump();
   return pid;
+}
+
+
+// join for a child thread (pid) to exit and return its pid.
+// Return -1 if this process has no children.
+int
+join(int pid)
+{
+  struct proc *p;
+  int found = 0;
+  acquire(&ptable.lock);
+  // Scan through table looking for that pid.
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if(p->pid != pid)
+        continue;
+      // never join on a main_thread
+      if (p->is_main_thd) {
+        release(&ptable.lock);
+        return -1;
+      }
+      // check same group
+      if (proc->is_main_thd) {
+        if (p->parent != proc) {
+          release(&ptable.lock);
+          return -1;
+        }
+      } else {
+        if (p->parent != proc->parent) {
+          release(&ptable.lock);
+          return -1;
+        }
+      }
+      // next we wait on p
+      found = 1;
+      break;
+  }
+  // no such pid to wait for 
+  if (!found) {
+    release(&ptable.lock);
+    return -1;
+  }
+  // lets wait on p
+  while(1) {
+    if (proc->killed) {
+      release(&ptable.lock);
+      return -1;
+    }
+    if (p->state == ZOMBIE) {
+      // free user stack for the thread
+      // void* stack = (void*) PGROUNDDOWN(p->tf->esp);
+      // cprintf("stack low address: %p\n", stack);
+      // char* pa = uva2ka(proc->pgdir, stack);
+      // cprintf("before kfree user stack\n");
+      // kfree(pa);
+      // cprintf("after kfree user stack\n");
+      p->pid = 0;
+      kfree(p->kstack);
+      p->state = UNUSED;
+      p->pid = 0;
+      p->parent = 0;
+      p->name[0] = 0;
+      p->killed = 0;
+      release(&ptable.lock);
+      // procdump();
+      return pid;
+    }
+    sleep(proc, &ptable.lock);  //DOC: wait-sleep
+  }
 }

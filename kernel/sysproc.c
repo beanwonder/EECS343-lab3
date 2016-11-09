@@ -39,8 +39,8 @@ int
 sys_join(void)
 {
   int pid;
-  if(argptr(0, (void*)&pid, sizeof(void*)) < 0){
-     return -1;
+  if(argint(0, &pid) < 0){
+    return -1;
   }
 
   return join(pid);
