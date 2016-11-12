@@ -205,6 +205,7 @@ exit(void)
     // cacasede exit if main thread exit
     if(p->parent == proc){
       if (p->is_main_thd == 1) {
+        // other process
         p->parent = initproc;
         if(p->state == ZOMBIE)
           wakeup1(initproc);
@@ -496,9 +497,8 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   }
 
   // share memory pagetable from p.
-  // share the same kstack 
   np->pgdir = proc->pgdir;
-  // np->kstack = p->kstack;
+  // should use the thread own kstack
   /* 
   if((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0){
     kfree(np->kstack);
@@ -520,7 +520,10 @@ clone(void(*fcn)(void*), void* arg, void* stack)
     np->parent = proc->parent;
   }
   // copy trap frame
+  // gs seems for thread local var
+  // ushort np_gs = np->tf->gs;
   *np->tf = *proc->tf;
+  // np->tf->gs = np_gs;
 
 
   // set up return address for fnc function call
