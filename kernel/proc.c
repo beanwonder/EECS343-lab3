@@ -205,7 +205,7 @@ exit(void)
     // cacasede exit if main thread exit
     if(p->parent == proc){
       if (p->is_main_thd == 1) {
-        // other process
+        // other 
         p->parent = initproc;
         if(p->state == ZOMBIE)
           wakeup1(initproc);

@@ -42,4 +42,11 @@ void* malloc(uint);
 void free(void*);
 int atoi(const char*);
 
+// user thread libraray funcions (uthreadlib.c)
+#define PGSIZE (4096)
+struct lock_t;
+int thread_create(void (*)(void*), void*);
+int thread_join(int);
+
+
 #endif // _USER_H_
